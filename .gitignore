@@ -1,0 +1,14 @@
+bin/
+obj/
+.vs/
+*.user
+*.suo
+
+# Generated report output
+Reports/*.txt
+Reports/*.csv
+Reports/*.json
+
+# Local database files, if any are created later
+*.mdf
+*.ldf
