@@ -18,11 +18,25 @@ public static class ConsoleHelper
         }
     }
 
+    public static string ReadRequiredStringOrDefault(string label, string currentValue)
+    {
+        Console.Write(label);
+        string? value = Console.ReadLine();
+        return string.IsNullOrWhiteSpace(value) ? currentValue : value.Trim();
+    }
+
     public static string? ReadOptionalString(string label)
     {
         Console.Write(label);
         string? value = Console.ReadLine();
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    public static string? ReadOptionalStringOrDefault(string label, string? currentValue)
+    {
+        Console.Write(label);
+        string? value = Console.ReadLine();
+        return string.IsNullOrWhiteSpace(value) ? currentValue : value.Trim();
     }
 
     public static decimal ReadPositiveDecimal(string label)
@@ -41,6 +55,27 @@ public static class ConsoleHelper
         }
     }
 
+    public static decimal ReadPositiveDecimalOrDefault(string label, decimal currentValue)
+    {
+        while (true)
+        {
+            Console.Write(label);
+            string? input = Console.ReadLine();
+
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                return currentValue;
+            }
+
+            if (decimal.TryParse(input, out decimal value) && value > 0)
+            {
+                return value;
+            }
+
+            Console.WriteLine("Please enter a valid positive number, or press Enter to keep the current value.");
+        }
+    }
+
     public static int ReadInt(string label, int min, int max)
     {
         while (true)
@@ -54,6 +89,27 @@ public static class ConsoleHelper
             }
 
             Console.WriteLine($"Please enter a number from {min} to {max}.");
+        }
+    }
+
+    public static int ReadIntOrDefault(string label, int min, int max, int currentValue)
+    {
+        while (true)
+        {
+            Console.Write(label);
+            string? input = Console.ReadLine();
+
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                return currentValue;
+            }
+
+            if (int.TryParse(input, out int value) && value >= min && value <= max)
+            {
+                return value;
+            }
+
+            Console.WriteLine($"Please enter a number from {min} to {max}, or press Enter to keep the current value.");
         }
     }
 
@@ -78,6 +134,27 @@ public static class ConsoleHelper
         }
     }
 
+    public static int? ReadOptionalIntOrDefault(string label, int? currentValue)
+    {
+        while (true)
+        {
+            Console.Write(label);
+            string? input = Console.ReadLine();
+
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                return currentValue;
+            }
+
+            if (int.TryParse(input, out int value) && value > 0)
+            {
+                return value;
+            }
+
+            Console.WriteLine("Please enter a valid positive number, or press Enter to keep the current value.");
+        }
+    }
+
     public static DateTime ReadDate(string label)
     {
         while (true)
@@ -91,6 +168,27 @@ public static class ConsoleHelper
             }
 
             Console.WriteLine("Please enter a valid date, for example 2025-05-21.");
+        }
+    }
+
+    public static DateTime ReadDateOrDefault(string label, DateTime currentValue)
+    {
+        while (true)
+        {
+            Console.Write(label);
+            string? input = Console.ReadLine();
+
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                return currentValue;
+            }
+
+            if (DateTime.TryParse(input, out DateTime date))
+            {
+                return date.Date;
+            }
+
+            Console.WriteLine("Please enter a valid date, or press Enter to keep the current value.");
         }
     }
 

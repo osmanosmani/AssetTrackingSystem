@@ -5,6 +5,7 @@ namespace AssetTrackingSystem.Services;
 
 public class ReportService
 {
+    private const int PageSize = 5;
     private readonly AssetService assetService;
 
     public ReportService(AssetService assetService)
@@ -12,9 +13,9 @@ public class ReportService
         this.assetService = assetService;
     }
 
-    public void ShowTotalValuePerOffice()
+    public async Task ShowTotalValuePerOfficeAsync()
     {
-        var report = assetService.GetAllAssets()
+        var report = (await assetService.GetAllAssetsAsync())
             .Where(asset => asset.Office != null)
             .GroupBy(asset => asset.Office!)
             .Select(group => new
@@ -37,9 +38,11 @@ public class ReportService
         PrintFooter();
     }
 
-    public void ShowAssetCountPerOffice()
+    public async Task ShowAssetCountPerOfficeAsync()
     {
-        var report = assetService.GetAllAssets()
+        List<Asset> allAssets = await assetService.GetAllAssetsAsync();
+
+        var report = allAssets
             .Where(asset => asset.Office != null)
             .GroupBy(asset => asset.Office!.Name)
             .Select(group => new { Office = group.Key, Count = group.Count() })
@@ -58,12 +61,8 @@ public class ReportService
         Console.WriteLine("Assets Near Expiration");
         Console.WriteLine(new string('-', 40));
 
-        List<Asset> nearExpirationAssets = assetService.GetAllAssets()
-            .Where(asset =>
-            {
-                string status = AssetStatusHelper.GetStatus(asset);
-                return status is "RED" or "YELLOW" or "EXPIRED";
-            })
+        List<Asset> nearExpirationAssets = allAssets
+            .Where(IsNearExpiration)
             .OrderBy(asset => asset.PurchaseDate.AddYears(3))
             .ToList();
 
@@ -82,23 +81,19 @@ public class ReportService
         PrintFooter();
     }
 
-    public void ShowAssetsCloseToExpiration()
+    public async Task ShowAssetsCloseToExpirationAsync()
     {
-        List<Asset> assets = assetService.GetAllAssets()
-            .Where(asset =>
-            {
-                string status = AssetStatusHelper.GetStatus(asset);
-                return status is "RED" or "YELLOW" or "EXPIRED";
-            })
+        List<Asset> assets = (await assetService.GetAllAssetsAsync())
+            .Where(IsNearExpiration)
             .OrderBy(asset => asset.PurchaseDate.AddYears(3))
             .ToList();
 
         PrintAssets(assets, "ASSETS NEAR EXPIRATION");
     }
 
-    public void ShowMostExpensiveAssets()
+    public async Task ShowMostExpensiveAssetsAsync()
     {
-        List<Asset> assets = assetService.GetAllAssets()
+        List<Asset> assets = (await assetService.GetAllAssetsAsync())
             .OrderByDescending(asset => asset.PurchasePriceUsd)
             .Take(5)
             .ToList();
@@ -123,6 +118,73 @@ public class ReportService
             return;
         }
 
+        if (assets.Count <= PageSize)
+        {
+            PrintAssetTable(assets);
+        }
+        else
+        {
+            PrintAssetsWithPagination(assets);
+        }
+
+        PrintTotalWhenSingleCurrency(assets);
+        PrintFooter();
+    }
+
+    public static string GetCategoryName(Asset asset)
+    {
+        return asset switch
+        {
+            ComputerAsset => "Computer",
+            MobileAsset => "Mobile",
+            _ => "General"
+        };
+    }
+
+    private static bool IsNearExpiration(Asset asset)
+    {
+        string status = AssetStatusHelper.GetStatus(asset);
+        return status is "RED" or "YELLOW" or "EXPIRED";
+    }
+
+    private static void PrintAssetsWithPagination(List<Asset> assets)
+    {
+        int page = 0;
+        int totalPages = (int)Math.Ceiling(assets.Count / (double)PageSize);
+
+        while (true)
+        {
+            List<Asset> currentPageAssets = assets.Skip(page * PageSize).Take(PageSize).ToList();
+            PrintAssetTable(currentPageAssets);
+            Console.WriteLine($"Page {page + 1} of {totalPages}");
+
+            if (totalPages == 1)
+            {
+                return;
+            }
+
+            Console.Write("N = next, P = previous, Q = quit: ");
+            string? input = Console.ReadLine()?.Trim().ToUpper();
+
+            if (input == "N" && page < totalPages - 1)
+            {
+                page++;
+            }
+            else if (input == "P" && page > 0)
+            {
+                page--;
+            }
+            else if (input == "Q" || string.IsNullOrWhiteSpace(input))
+            {
+                return;
+            }
+
+            Console.WriteLine();
+        }
+    }
+
+    private static void PrintAssetTable(List<Asset> assets)
+    {
         Console.WriteLine($"{"ID",-4} {"Type",-16} {"Brand",-14} {"Model",-20} {"Office",-16} {"Price",-16} {"Status",-8}");
         Console.WriteLine(new string('-', 104));
 
@@ -137,7 +199,10 @@ public class ReportService
             Console.WriteLine($"{status,-8}");
             Console.ResetColor();
         }
+    }
 
+    private static void PrintTotalWhenSingleCurrency(List<Asset> assets)
+    {
         decimal totalValue = assets.Sum(asset => asset.LocalPrice);
         List<string?> currencies = assets
             .Select(asset => asset.Office?.Currency)
@@ -150,18 +215,6 @@ public class ReportService
             Console.WriteLine();
             Console.WriteLine($"Total Value: {totalValue:N0} {currencies[0]}");
         }
-
-        PrintFooter();
-    }
-
-    public static string GetCategoryName(Asset asset)
-    {
-        return asset switch
-        {
-            ComputerAsset => "Computer",
-            MobileAsset => "Mobile",
-            _ => "General"
-        };
     }
 
     private static void PrintTitle(string title)

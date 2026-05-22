@@ -31,28 +31,28 @@ while (true)
         switch (choice)
         {
             case 1:
-                assetService.AddAsset();
+                await assetService.AddAssetAsync();
                 break;
             case 2:
-                reportService.PrintAssets(assetService.GetAllAssets(), "ASSET LIST");
+                reportService.PrintAssets(await assetService.GetAllAssetsAsync(), "ASSET LIST");
                 break;
             case 3:
-                assetService.UpdateAsset();
+                await assetService.UpdateAssetAsync();
                 break;
             case 4:
-                assetService.DeleteAsset();
+                await assetService.DeleteAssetAsync();
                 break;
             case 5:
-                ShowSearchMenu();
+                await ShowSearchMenuAsync();
                 break;
             case 6:
-                ShowReportsMenu();
+                await ShowReportsMenuAsync();
                 break;
             case 7:
-                ShowFiltersMenu();
+                await ShowFiltersMenuAsync();
                 break;
             case 8:
-                ShowExportMenu();
+                await ShowExportMenuAsync();
                 break;
             case 9:
                 return;
@@ -78,7 +78,7 @@ void ClearConsole()
     }
 }
 
-void ShowSearchMenu()
+async Task ShowSearchMenuAsync()
 {
     Console.WriteLine("1. General search");
     Console.WriteLine("2. Search by brand");
@@ -93,27 +93,27 @@ void ShowSearchMenu()
     {
         case 1:
             string searchText = ConsoleHelper.ReadRequiredString("Search text: ");
-            results = assetService.SearchAssets(searchText);
+            results = await assetService.SearchAssetsAsync(searchText);
             PrintSearchResults(results, $"Search: Text = {searchText}");
             break;
         case 2:
             string brand = ConsoleHelper.ReadRequiredString("Brand: ");
-            results = assetService.SearchByBrand(brand);
+            results = await assetService.SearchByBrandAsync(brand);
             PrintSearchResults(results, $"Search: Brand = {brand}");
             break;
         case 3:
             string model = ConsoleHelper.ReadRequiredString("Model: ");
-            results = assetService.SearchByModel(model);
+            results = await assetService.SearchByModelAsync(model);
             PrintSearchResults(results, $"Search: Model = {model}");
             break;
         case 4:
             string office = ConsoleHelper.ReadRequiredString("Office: ");
-            results = assetService.SearchByOffice(office);
+            results = await assetService.SearchByOfficeAsync(office);
             PrintSearchResults(results, $"Search: Office = {office}");
             break;
         default:
             int year = ConsoleHelper.ReadInt("Purchase year: ", 1900, DateTime.Today.Year + 1);
-            results = assetService.SearchByPurchaseYear(year);
+            results = await assetService.SearchByPurchaseYearAsync(year);
             PrintSearchResults(results, $"Search: Purchase Year = {year}");
             break;
     }
@@ -125,7 +125,7 @@ void PrintSearchResults(List<Asset> results, string subtitle)
     reportService.PrintAssets(results, "SEARCH RESULT", subtitle);
 }
 
-void ShowReportsMenu()
+async Task ShowReportsMenuAsync()
 {
     Console.WriteLine("1. Total asset value per office");
     Console.WriteLine("2. Asset count per office");
@@ -138,21 +138,21 @@ void ShowReportsMenu()
     switch (choice)
     {
         case 1:
-            reportService.ShowTotalValuePerOffice();
+            await reportService.ShowTotalValuePerOfficeAsync();
             break;
         case 2:
-            reportService.ShowAssetCountPerOffice();
+            await reportService.ShowAssetCountPerOfficeAsync();
             break;
         case 3:
-            reportService.ShowAssetsCloseToExpiration();
+            await reportService.ShowAssetsCloseToExpirationAsync();
             break;
         case 4:
-            reportService.ShowMostExpensiveAssets();
+            await reportService.ShowMostExpensiveAssetsAsync();
             break;
     }
 }
 
-void ShowFiltersMenu()
+async Task ShowFiltersMenuAsync()
 {
     Console.WriteLine("1. Expired assets");
     Console.WriteLine("2. Only computers");
@@ -164,10 +164,10 @@ void ShowFiltersMenu()
 
     List<Asset> assets = choice switch
     {
-        1 => assetService.GetExpiredAssets(),
-        2 => assetService.GetComputerAssets(),
-        3 => assetService.GetMobileAssets(),
-        _ => assetService.GetAssetsByOffice()
+        1 => await assetService.GetExpiredAssetsAsync(),
+        2 => await assetService.GetComputerAssetsAsync(),
+        3 => await assetService.GetMobileAssetsAsync(),
+        _ => await assetService.GetAssetsByOfficeAsync()
     };
 
     string title = choice switch
@@ -181,9 +181,9 @@ void ShowFiltersMenu()
     reportService.PrintAssets(assets, title);
 }
 
-void ShowExportMenu()
+async Task ShowExportMenuAsync()
 {
-    List<Asset> assets = assetService.GetAllAssets();
+    List<Asset> assets = await assetService.GetAllAssetsAsync();
 
     Console.WriteLine("1. Export TXT");
     Console.WriteLine("2. Export CSV");

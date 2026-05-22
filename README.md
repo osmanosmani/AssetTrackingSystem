@@ -1,10 +1,12 @@
 # Smart Asset Tracking System
 
-A C# .NET Console Application for tracking company assets such as laptops, desktop computers, mobile phones and tablets.
+A C# .NET Console Application for tracking company assets such as laptops, desktop computers, mobile phones, tablets and office equipment.
 
 The project uses Entity Framework Core, SQL Server LocalDB, migrations, LINQ, OOP inheritance, CRUD operations, reports, filtering and export features.
 
 ## Console Preview
+
+![Console preview](docs/console-preview.svg)
 
 ```text
 Smart Asset Tracking System
@@ -36,6 +38,7 @@ ID   Type             Brand          Model                Office           Price
 ## Features
 
 - Add, show, update, delete and search assets
+- Office equipment can be registered as a general asset
 - Inheritance with `Asset`, `ComputerAsset` and `MobileAsset`
 - Separate EF Core tables for asset categories using TPT inheritance:
   - `Assets`
@@ -45,26 +48,24 @@ ID   Type             Brand          Model                Office           Price
 - SQL Server LocalDB database
 - EF Core migrations
 - LINQ sorting, searching, filtering and reporting
-- Asset lifecycle status:
-  - `EXPIRED`
-  - `RED`
-  - `YELLOW`
-  - `NORMAL`
-- Office and currency support:
-  - Sweden Office, SEK
-  - USA Office, USD
-  - Germany Office, EUR
-  - Turkey Office, TRY
+- Asset lifecycle status: `EXPIRED`, `RED`, `YELLOW`, `NORMAL`
+- Office and currency support for Sweden, USA, Germany and Turkey
 - Fixed USD conversion rates
-- Reports:
-  - Total asset value per office
-  - Asset count per office
-  - Assets near expiration
-  - Most expensive assets
-- Export reports to:
-  - TXT
-  - CSV
-  - JSON
+- Reports for office value, office count, near-expiration assets and most expensive assets
+- Export reports to TXT, CSV and JSON
+- Async EF Core database operations in the main services
+- Pagination support for longer asset lists
+
+## Asset Status Logic
+
+The assignment text has inconsistent wording for `RED` and `YELLOW`. This project uses the more common business interpretation where `RED` is the most urgent warning:
+
+```text
+EXPIRED = asset is past its 3-year lifetime
+RED     = less than 3 months remaining
+YELLOW  = less than 6 months remaining
+NORMAL  = more than 6 months remaining
+```
 
 ## Project Structure
 
@@ -104,20 +105,20 @@ AssetTrackingSystem/
 
 ## Database
 
-The app uses SQL Server LocalDB with this connection string:
+The app uses SQL Server LocalDB with this example local development connection string:
 
 ```text
 Server=(localdb)\mssqllocaldb;Database=AssetTrackingDb;Trusted_Connection=True;TrustServerCertificate=True
 ```
 
-LocalDB is good for school projects and local development on Windows.
+LocalDB is good for school projects and local development on Windows. This connection string does not contain a username, password or cloud secret.
 
 ## How To Run Locally
 
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/your-username/AssetTrackingSystem.git
+git clone https://github.com/osmanosmani/AssetTrackingSystem.git
 cd AssetTrackingSystem
 ```
 
@@ -159,11 +160,11 @@ List migrations:
 dotnet ef migrations list
 ```
 
-If a migration is empty, it usually means EF Core did not detect any model change.
+If a migration is empty, EF Core usually did not detect a model change.
 
 ## GitHub Deployment
 
-This is a console application, so the best first “deployment” is publishing the source code to GitHub.
+This is a console application, so the best first "deployment" is publishing the source code to GitHub.
 
 Recommended steps:
 
@@ -172,7 +173,7 @@ git init
 git add .
 git commit -m "Add smart asset tracking system"
 git branch -M main
-git remote add origin https://github.com/your-username/AssetTrackingSystem.git
+git remote add origin https://github.com/osmanosmani/AssetTrackingSystem.git
 git push -u origin main
 ```
 
@@ -211,7 +212,19 @@ For this school project, GitHub + LocalDB is the simplest and most presentation-
 - [x] Reports
 - [x] Search and filtering
 - [x] TXT, CSV and JSON export
+- [x] Pagination for larger lists
+- [x] Async EF Core operations
 - [x] Clean folder structure
+
+## Presentation Notes
+
+This project demonstrates a practical console-based business application. During a presentation, a good flow is:
+
+1. Show the menu and explain the asset tracking problem.
+2. Show the model structure: `Asset`, `ComputerAsset`, `MobileAsset`, and `Office`.
+3. Explain that EF Core maps inheritance with separate category tables.
+4. Demonstrate `Show All Assets`, `Search`, `Reports`, and `Export`.
+5. Mention validation, status calculation, currency conversion, and migrations.
 
 ## Author
 

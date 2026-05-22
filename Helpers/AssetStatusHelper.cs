@@ -9,6 +9,7 @@ public static class AssetStatusHelper
         DateTime endOfLifeDate = asset.PurchaseDate.AddYears(3);
         DateTime today = DateTime.Today;
 
+        // RED is treated as the most urgent warning even though the PDF wording is inconsistent.
         if (endOfLifeDate < today)
         {
             return "EXPIRED";

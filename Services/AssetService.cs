@@ -7,35 +7,28 @@ namespace AssetTrackingSystem.Services;
 
 public class AssetService
 {
-    public List<Asset> GetAllAssets()
+    public async Task<List<Asset>> GetAllAssetsAsync()
     {
         using AppDbContext dbContext = new();
 
-        return dbContext.Assets
+        // EF Core loads the derived TPT rows automatically when querying the base Assets set.
+        return await dbContext.Assets
             .Include(asset => asset.Office)
-            .OrderBy(asset => asset is ComputerAsset ? "Computer" : "Mobile")
+            .OrderBy(asset => asset is ComputerAsset ? "Computer" : asset is MobileAsset ? "Mobile" : "General")
             .ThenBy(asset => asset.PurchaseDate)
-            .ToList();
+            .ToListAsync();
     }
 
-    public Asset? GetAssetById(int id)
-    {
-        using AppDbContext dbContext = new();
-
-        return dbContext.Assets
-            .Include(asset => asset.Office)
-            .FirstOrDefault(asset => asset.Id == id);
-    }
-
-    public void AddAsset()
+    public async Task AddAssetAsync()
     {
         using AppDbContext dbContext = new();
 
         Console.WriteLine("1. Computer asset");
         Console.WriteLine("2. Mobile asset");
-        int category = ConsoleHelper.ReadInt("Choose category: ", 1, 2);
+        Console.WriteLine("3. Office equipment");
+        int category = ConsoleHelper.ReadInt("Choose category: ", 1, 3);
 
-        List<Office> offices = dbContext.Offices.OrderBy(office => office.Name).ToList();
+        List<Office> offices = await dbContext.Offices.OrderBy(office => office.Name).ToListAsync();
         Office office = ChooseOffice(offices);
 
         string brand = ConsoleHelper.ReadRequiredString("Brand: ");
@@ -71,7 +64,7 @@ public class AssetService
                 StorageGb = ConsoleHelper.ReadOptionalInt("Storage GB (optional): ")
             };
         }
-        else
+        else if (category == 2)
         {
             string mobileType = ConsoleHelper.ReadRequiredString("Mobile type (iPhone/Samsung/Nokia/Tablet): ");
 
@@ -92,18 +85,34 @@ public class AssetService
                 PhoneNumber = ConsoleHelper.ReadOptionalString("Phone number (optional): ")
             };
         }
+        else
+        {
+            asset = new Asset
+            {
+                AssetType = "Office Equipment",
+                Brand = brand,
+                ModelName = modelName,
+                PurchaseDate = purchaseDate,
+                PurchasePriceUsd = purchasePriceUsd,
+                LocalPrice = localPrice,
+                SerialNumber = serialNumber,
+                EmployeeUsername = employeeUsername,
+                WarrantyExpirationDate = warrantyDate,
+                OfficeId = office.Id
+            };
+        }
 
         dbContext.Assets.Add(asset);
-        dbContext.SaveChanges();
+        await dbContext.SaveChangesAsync();
         Console.WriteLine("Asset added successfully.");
     }
 
-    public void UpdateAsset()
+    public async Task UpdateAssetAsync()
     {
         using AppDbContext dbContext = new();
 
         int id = ConsoleHelper.ReadInt("Asset id to update: ", 1, int.MaxValue);
-        Asset? asset = dbContext.Assets.Include(item => item.Office).FirstOrDefault(item => item.Id == id);
+        Asset? asset = await dbContext.Assets.Include(item => item.Office).FirstOrDefaultAsync(item => item.Id == id);
 
         if (asset is null)
         {
@@ -111,46 +120,49 @@ public class AssetService
             return;
         }
 
-        List<Office> offices = dbContext.Offices.OrderBy(office => office.Name).ToList();
-        Office office = ChooseOffice(offices);
+        Console.WriteLine("Press Enter to keep the current value.");
+        Console.WriteLine();
 
-        asset.Brand = ConsoleHelper.ReadRequiredString($"Brand ({asset.Brand}): ");
-        asset.ModelName = ConsoleHelper.ReadRequiredString($"Model name ({asset.ModelName}): ");
-        asset.PurchaseDate = ConsoleHelper.ReadDate($"Purchase date ({asset.PurchaseDate:yyyy-MM-dd}): ");
-        asset.PurchasePriceUsd = ConsoleHelper.ReadPositiveDecimal($"Purchase price USD ({asset.PurchasePriceUsd:N2}): ");
+        List<Office> offices = await dbContext.Offices.OrderBy(office => office.Name).ToListAsync();
+        Office office = ChooseOffice(offices, asset.OfficeId);
+
+        asset.Brand = ConsoleHelper.ReadRequiredStringOrDefault($"Brand ({asset.Brand}): ", asset.Brand);
+        asset.ModelName = ConsoleHelper.ReadRequiredStringOrDefault($"Model name ({asset.ModelName}): ", asset.ModelName);
+        asset.PurchaseDate = ConsoleHelper.ReadDateOrDefault($"Purchase date ({asset.PurchaseDate:yyyy-MM-dd}): ", asset.PurchaseDate);
+        asset.PurchasePriceUsd = ConsoleHelper.ReadPositiveDecimalOrDefault($"Purchase price USD ({asset.PurchasePriceUsd:N2}): ", asset.PurchasePriceUsd);
         asset.LocalPrice = CurrencyHelper.ConvertFromUsd(asset.PurchasePriceUsd, office.Currency);
-        asset.SerialNumber = ConsoleHelper.ReadRequiredString($"Serial number ({asset.SerialNumber}): ");
-        asset.EmployeeUsername = ConsoleHelper.ReadOptionalString($"Employee username ({asset.EmployeeUsername ?? "none"}): ");
-        asset.WarrantyExpirationDate = ConsoleHelper.ReadDate($"Warranty expiration ({asset.WarrantyExpirationDate:yyyy-MM-dd}): ");
+        asset.SerialNumber = ConsoleHelper.ReadRequiredStringOrDefault($"Serial number ({asset.SerialNumber}): ", asset.SerialNumber);
+        asset.EmployeeUsername = ConsoleHelper.ReadOptionalStringOrDefault($"Employee username ({asset.EmployeeUsername ?? "none"}): ", asset.EmployeeUsername);
+        asset.WarrantyExpirationDate = ConsoleHelper.ReadDateOrDefault($"Warranty expiration ({asset.WarrantyExpirationDate:yyyy-MM-dd}): ", asset.WarrantyExpirationDate);
         asset.OfficeId = office.Id;
 
         if (asset is ComputerAsset computerAsset)
         {
-            computerAsset.ComputerType = ConsoleHelper.ReadRequiredString($"Computer type ({computerAsset.ComputerType}): ");
+            computerAsset.ComputerType = ConsoleHelper.ReadRequiredStringOrDefault($"Computer type ({computerAsset.ComputerType}): ", computerAsset.ComputerType);
             computerAsset.AssetType = computerAsset.ComputerType;
-            computerAsset.Processor = ConsoleHelper.ReadOptionalString($"Processor ({computerAsset.Processor ?? "none"}): ");
-            computerAsset.RamGb = ConsoleHelper.ReadOptionalInt($"RAM GB ({computerAsset.RamGb?.ToString() ?? "none"}): ");
-            computerAsset.StorageGb = ConsoleHelper.ReadOptionalInt($"Storage GB ({computerAsset.StorageGb?.ToString() ?? "none"}): ");
+            computerAsset.Processor = ConsoleHelper.ReadOptionalStringOrDefault($"Processor ({computerAsset.Processor ?? "none"}): ", computerAsset.Processor);
+            computerAsset.RamGb = ConsoleHelper.ReadOptionalIntOrDefault($"RAM GB ({computerAsset.RamGb?.ToString() ?? "none"}): ", computerAsset.RamGb);
+            computerAsset.StorageGb = ConsoleHelper.ReadOptionalIntOrDefault($"Storage GB ({computerAsset.StorageGb?.ToString() ?? "none"}): ", computerAsset.StorageGb);
         }
 
         if (asset is MobileAsset mobileAsset)
         {
-            mobileAsset.MobileType = ConsoleHelper.ReadRequiredString($"Mobile type ({mobileAsset.MobileType}): ");
+            mobileAsset.MobileType = ConsoleHelper.ReadRequiredStringOrDefault($"Mobile type ({mobileAsset.MobileType}): ", mobileAsset.MobileType);
             mobileAsset.AssetType = mobileAsset.MobileType;
-            mobileAsset.ImeiNumber = ConsoleHelper.ReadOptionalString($"IMEI number ({mobileAsset.ImeiNumber ?? "none"}): ");
-            mobileAsset.PhoneNumber = ConsoleHelper.ReadOptionalString($"Phone number ({mobileAsset.PhoneNumber ?? "none"}): ");
+            mobileAsset.ImeiNumber = ConsoleHelper.ReadOptionalStringOrDefault($"IMEI number ({mobileAsset.ImeiNumber ?? "none"}): ", mobileAsset.ImeiNumber);
+            mobileAsset.PhoneNumber = ConsoleHelper.ReadOptionalStringOrDefault($"Phone number ({mobileAsset.PhoneNumber ?? "none"}): ", mobileAsset.PhoneNumber);
         }
 
-        dbContext.SaveChanges();
+        await dbContext.SaveChangesAsync();
         Console.WriteLine("Asset updated successfully.");
     }
 
-    public void DeleteAsset()
+    public async Task DeleteAssetAsync()
     {
         using AppDbContext dbContext = new();
 
         int id = ConsoleHelper.ReadInt("Asset id to delete: ", 1, int.MaxValue);
-        Asset? asset = dbContext.Assets.FirstOrDefault(item => item.Id == id);
+        Asset? asset = await dbContext.Assets.FirstOrDefaultAsync(item => item.Id == id);
 
         if (asset is null)
         {
@@ -159,16 +171,16 @@ public class AssetService
         }
 
         dbContext.Assets.Remove(asset);
-        dbContext.SaveChanges();
+        await dbContext.SaveChangesAsync();
         Console.WriteLine("Asset deleted successfully.");
     }
 
-    public List<Asset> SearchAssets(string searchText)
+    public async Task<List<Asset>> SearchAssetsAsync(string searchText)
     {
         using AppDbContext dbContext = new();
         string value = searchText.ToLower();
 
-        return dbContext.Assets
+        return await dbContext.Assets
             .Include(asset => asset.Office)
             .Where(asset =>
                 asset.Brand.ToLower().Contains(value) ||
@@ -177,81 +189,84 @@ public class AssetService
                 asset.Office != null && asset.Office.Name.ToLower().Contains(value))
             .OrderBy(asset => asset.Brand)
             .ThenBy(asset => asset.ModelName)
-            .ToList();
+            .ToListAsync();
     }
 
-    public List<Asset> SearchByBrand(string brand)
+    public async Task<List<Asset>> SearchByBrandAsync(string brand)
     {
         using AppDbContext dbContext = new();
-        return dbContext.Assets.Include(asset => asset.Office)
+        return await dbContext.Assets.Include(asset => asset.Office)
             .Where(asset => asset.Brand.Contains(brand))
-            .ToList();
+            .ToListAsync();
     }
 
-    public List<Asset> SearchByModel(string model)
+    public async Task<List<Asset>> SearchByModelAsync(string model)
     {
         using AppDbContext dbContext = new();
-        return dbContext.Assets.Include(asset => asset.Office)
+        return await dbContext.Assets.Include(asset => asset.Office)
             .Where(asset => asset.ModelName.Contains(model))
-            .ToList();
+            .ToListAsync();
     }
 
-    public List<Asset> SearchByOffice(string officeName)
+    public async Task<List<Asset>> SearchByOfficeAsync(string officeName)
     {
         using AppDbContext dbContext = new();
-        return dbContext.Assets.Include(asset => asset.Office)
+        return await dbContext.Assets.Include(asset => asset.Office)
             .Where(asset => asset.Office != null && asset.Office.Name.Contains(officeName))
-            .ToList();
+            .ToListAsync();
     }
 
-    public List<Asset> SearchByPurchaseYear(int year)
+    public async Task<List<Asset>> SearchByPurchaseYearAsync(int year)
     {
         using AppDbContext dbContext = new();
-        return dbContext.Assets.Include(asset => asset.Office)
+        return await dbContext.Assets.Include(asset => asset.Office)
             .Where(asset => asset.PurchaseDate.Year == year)
-            .ToList();
+            .ToListAsync();
     }
 
-    public List<Asset> GetExpiredAssets()
+    public async Task<List<Asset>> GetExpiredAssetsAsync()
     {
-        return GetAllAssets()
-            .Where(asset => AssetStatusHelper.GetStatus(asset) == "EXPIRED")
-            .ToList();
+        List<Asset> assets = await GetAllAssetsAsync();
+        return assets.Where(asset => AssetStatusHelper.GetStatus(asset) == "EXPIRED").ToList();
     }
 
-    public List<Asset> GetComputerAssets()
-    {
-        using AppDbContext dbContext = new();
-        return dbContext.ComputerAssets.Include(asset => asset.Office).Cast<Asset>().ToList();
-    }
-
-    public List<Asset> GetMobileAssets()
+    public async Task<List<Asset>> GetComputerAssetsAsync()
     {
         using AppDbContext dbContext = new();
-        return dbContext.MobileAssets.Include(asset => asset.Office).Cast<Asset>().ToList();
+        return await dbContext.ComputerAssets.Include(asset => asset.Office).Cast<Asset>().ToListAsync();
     }
 
-    public List<Asset> GetAssetsByOffice()
+    public async Task<List<Asset>> GetMobileAssetsAsync()
     {
         using AppDbContext dbContext = new();
-        List<Office> offices = dbContext.Offices.OrderBy(office => office.Name).ToList();
+        return await dbContext.MobileAssets.Include(asset => asset.Office).Cast<Asset>().ToListAsync();
+    }
+
+    public async Task<List<Asset>> GetAssetsByOfficeAsync()
+    {
+        using AppDbContext dbContext = new();
+        List<Office> offices = await dbContext.Offices.OrderBy(office => office.Name).ToListAsync();
         Office office = ChooseOffice(offices);
 
-        return dbContext.Assets
+        return await dbContext.Assets
             .Include(asset => asset.Office)
             .Where(asset => asset.OfficeId == office.Id)
-            .ToList();
+            .ToListAsync();
     }
 
-    private static Office ChooseOffice(List<Office> offices)
+    private static Office ChooseOffice(List<Office> offices, int? currentOfficeId = null)
     {
         for (int i = 0; i < offices.Count; i++)
         {
             Office office = offices[i];
-            Console.WriteLine($"{i + 1}. {office.Name} ({office.Country}, {office.Currency})");
+            string currentMarker = office.Id == currentOfficeId ? " (current)" : "";
+            Console.WriteLine($"{i + 1}. {office.Name} ({office.Country}, {office.Currency}){currentMarker}");
         }
 
-        int choice = ConsoleHelper.ReadInt("Choose office: ", 1, offices.Count);
+        int choice = currentOfficeId is null
+            ? ConsoleHelper.ReadInt("Choose office: ", 1, offices.Count)
+            : ConsoleHelper.ReadIntOrDefault("Choose office: ", 1, offices.Count, offices.FindIndex(office => office.Id == currentOfficeId) + 1);
+
         return offices[choice - 1];
     }
 }
