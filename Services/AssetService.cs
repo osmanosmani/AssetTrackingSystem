@@ -33,11 +33,11 @@ public class AssetService
 
         string brand = ConsoleHelper.ReadRequiredString("Brand: ");
         string modelName = ConsoleHelper.ReadRequiredString("Model name: ");
-        DateTime purchaseDate = ConsoleHelper.ReadDate("Purchase date (yyyy-mm-dd): ");
+        DateTime purchaseDate = ConsoleHelper.ReadPurchaseDate("Purchase date (yyyy-mm-dd): ");
         decimal purchasePriceUsd = ConsoleHelper.ReadPositiveDecimal("Purchase price USD: ");
-        string serialNumber = ConsoleHelper.ReadRequiredString("Serial number: ");
+        string serialNumber = await ReadUniqueSerialNumberAsync(dbContext);
         string? employeeUsername = ConsoleHelper.ReadOptionalString("Employee username (optional): ");
-        DateTime warrantyDate = ConsoleHelper.ReadDate("Warranty expiration date (yyyy-mm-dd): ");
+        DateTime warrantyDate = ConsoleHelper.ReadWarrantyDate("Warranty expiration date (yyyy-mm-dd): ", purchaseDate);
         decimal localPrice = CurrencyHelper.ConvertFromUsd(purchasePriceUsd, office.Currency);
 
         Asset asset;
@@ -128,12 +128,12 @@ public class AssetService
 
         asset.Brand = ConsoleHelper.ReadRequiredStringOrDefault($"Brand ({asset.Brand}): ", asset.Brand);
         asset.ModelName = ConsoleHelper.ReadRequiredStringOrDefault($"Model name ({asset.ModelName}): ", asset.ModelName);
-        asset.PurchaseDate = ConsoleHelper.ReadDateOrDefault($"Purchase date ({asset.PurchaseDate:yyyy-MM-dd}): ", asset.PurchaseDate);
+        asset.PurchaseDate = ConsoleHelper.ReadPurchaseDateOrDefault($"Purchase date ({asset.PurchaseDate:yyyy-MM-dd}): ", asset.PurchaseDate);
         asset.PurchasePriceUsd = ConsoleHelper.ReadPositiveDecimalOrDefault($"Purchase price USD ({asset.PurchasePriceUsd:N2}): ", asset.PurchasePriceUsd);
         asset.LocalPrice = CurrencyHelper.ConvertFromUsd(asset.PurchasePriceUsd, office.Currency);
-        asset.SerialNumber = ConsoleHelper.ReadRequiredStringOrDefault($"Serial number ({asset.SerialNumber}): ", asset.SerialNumber);
+        asset.SerialNumber = await ReadUniqueSerialNumberOrDefaultAsync(dbContext, $"Serial number ({asset.SerialNumber}): ", asset.SerialNumber, asset.Id);
         asset.EmployeeUsername = ConsoleHelper.ReadOptionalStringOrDefault($"Employee username ({asset.EmployeeUsername ?? "none"}): ", asset.EmployeeUsername);
-        asset.WarrantyExpirationDate = ConsoleHelper.ReadDateOrDefault($"Warranty expiration ({asset.WarrantyExpirationDate:yyyy-MM-dd}): ", asset.WarrantyExpirationDate);
+        asset.WarrantyExpirationDate = ConsoleHelper.ReadWarrantyDateOrDefault($"Warranty expiration ({asset.WarrantyExpirationDate:yyyy-MM-dd}): ", asset.WarrantyExpirationDate, asset.PurchaseDate);
         asset.OfficeId = office.Id;
 
         if (asset is ComputerAsset computerAsset)
@@ -178,15 +178,15 @@ public class AssetService
     public async Task<List<Asset>> SearchAssetsAsync(string searchText)
     {
         using AppDbContext dbContext = new();
-        string value = searchText.ToLower();
+        string pattern = CreateSearchPattern(searchText);
 
         return await dbContext.Assets
             .Include(asset => asset.Office)
             .Where(asset =>
-                asset.Brand.ToLower().Contains(value) ||
-                asset.ModelName.ToLower().Contains(value) ||
-                asset.SerialNumber.ToLower().Contains(value) ||
-                asset.Office != null && asset.Office.Name.ToLower().Contains(value))
+                EF.Functions.Like(asset.Brand, pattern) ||
+                EF.Functions.Like(asset.ModelName, pattern) ||
+                EF.Functions.Like(asset.SerialNumber, pattern) ||
+                asset.Office != null && EF.Functions.Like(asset.Office.Name, pattern))
             .OrderBy(asset => asset.Brand)
             .ThenBy(asset => asset.ModelName)
             .ToListAsync();
@@ -195,24 +195,30 @@ public class AssetService
     public async Task<List<Asset>> SearchByBrandAsync(string brand)
     {
         using AppDbContext dbContext = new();
+        string pattern = CreateSearchPattern(brand);
+
         return await dbContext.Assets.Include(asset => asset.Office)
-            .Where(asset => asset.Brand.Contains(brand))
+            .Where(asset => EF.Functions.Like(asset.Brand, pattern))
             .ToListAsync();
     }
 
     public async Task<List<Asset>> SearchByModelAsync(string model)
     {
         using AppDbContext dbContext = new();
+        string pattern = CreateSearchPattern(model);
+
         return await dbContext.Assets.Include(asset => asset.Office)
-            .Where(asset => asset.ModelName.Contains(model))
+            .Where(asset => EF.Functions.Like(asset.ModelName, pattern))
             .ToListAsync();
     }
 
     public async Task<List<Asset>> SearchByOfficeAsync(string officeName)
     {
         using AppDbContext dbContext = new();
+        string pattern = CreateSearchPattern(officeName);
+
         return await dbContext.Assets.Include(asset => asset.Office)
-            .Where(asset => asset.Office != null && asset.Office.Name.Contains(officeName))
+            .Where(asset => asset.Office != null && EF.Functions.Like(asset.Office.Name, pattern))
             .ToListAsync();
     }
 
@@ -268,5 +274,43 @@ public class AssetService
             : ConsoleHelper.ReadIntOrDefault("Choose office: ", 1, offices.Count, offices.FindIndex(office => office.Id == currentOfficeId) + 1);
 
         return offices[choice - 1];
+    }
+
+    private static async Task<string> ReadUniqueSerialNumberAsync(AppDbContext dbContext)
+    {
+        while (true)
+        {
+            string serialNumber = ConsoleHelper.ReadRequiredString("Serial number: ");
+
+            if (!await dbContext.Assets.AnyAsync(asset => asset.SerialNumber == serialNumber))
+            {
+                return serialNumber;
+            }
+
+            Console.WriteLine("This serial number already exists. Please enter a unique serial number.");
+        }
+    }
+
+    private static async Task<string> ReadUniqueSerialNumberOrDefaultAsync(AppDbContext dbContext, string label, string currentValue, int currentAssetId)
+    {
+        while (true)
+        {
+            string serialNumber = ConsoleHelper.ReadRequiredStringOrDefault(label, currentValue);
+
+            bool serialExists = await dbContext.Assets
+                .AnyAsync(asset => asset.SerialNumber == serialNumber && asset.Id != currentAssetId);
+
+            if (!serialExists)
+            {
+                return serialNumber;
+            }
+
+            Console.WriteLine("This serial number already belongs to another asset.");
+        }
+    }
+
+    private static string CreateSearchPattern(string value)
+    {
+        return $"%{value.Trim()}%";
     }
 }

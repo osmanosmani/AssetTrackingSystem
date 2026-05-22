@@ -37,12 +37,32 @@ public class AppDbContext : DbContext
             .Property(asset => asset.LocalPrice)
             .HasColumnType("decimal(18,2)");
 
+        modelBuilder.Entity<Asset>()
+            .HasIndex(asset => asset.SerialNumber)
+            .IsUnique();
+
         // Seed data gives the demo a complete starting point after running Update-Database.
         modelBuilder.Entity<Office>().HasData(
             new Office { Id = 1, Name = "Sweden Office", Country = "Sweden", Currency = "SEK" },
             new Office { Id = 2, Name = "USA Office", Country = "USA", Currency = "USD" },
             new Office { Id = 3, Name = "Germany Office", Country = "Germany", Currency = "EUR" },
             new Office { Id = 4, Name = "Turkey Office", Country = "Turkey", Currency = "TRY" });
+
+        modelBuilder.Entity<Asset>().HasData(
+            new Asset
+            {
+                Id = 5,
+                AssetType = "Office Equipment",
+                Brand = "Canon",
+                ModelName = "ImageClass MF455dw",
+                PurchaseDate = new DateTime(2025, 6, 3),
+                PurchasePriceUsd = 420,
+                LocalPrice = 4410,
+                SerialNumber = "CAN-PRN-005",
+                EmployeeUsername = null,
+                WarrantyExpirationDate = new DateTime(2028, 6, 3),
+                OfficeId = 1
+            });
 
         modelBuilder.Entity<ComputerAsset>().HasData(
             new ComputerAsset

@@ -171,6 +171,21 @@ public static class ConsoleHelper
         }
     }
 
+    public static DateTime ReadPurchaseDate(string label)
+    {
+        while (true)
+        {
+            DateTime date = ReadDate(label);
+
+            if (date <= DateTime.Today)
+            {
+                return date;
+            }
+
+            Console.WriteLine("Purchase date cannot be in the future.");
+        }
+    }
+
     public static DateTime ReadDateOrDefault(string label, DateTime currentValue)
     {
         while (true)
@@ -189,6 +204,51 @@ public static class ConsoleHelper
             }
 
             Console.WriteLine("Please enter a valid date, or press Enter to keep the current value.");
+        }
+    }
+
+    public static DateTime ReadPurchaseDateOrDefault(string label, DateTime currentValue)
+    {
+        while (true)
+        {
+            DateTime date = ReadDateOrDefault(label, currentValue);
+
+            if (date <= DateTime.Today)
+            {
+                return date;
+            }
+
+            Console.WriteLine("Purchase date cannot be in the future.");
+        }
+    }
+
+    public static DateTime ReadWarrantyDate(string label, DateTime purchaseDate)
+    {
+        while (true)
+        {
+            DateTime date = ReadDate(label);
+
+            if (date >= purchaseDate)
+            {
+                return date;
+            }
+
+            Console.WriteLine("Warranty expiration date cannot be before the purchase date.");
+        }
+    }
+
+    public static DateTime ReadWarrantyDateOrDefault(string label, DateTime currentValue, DateTime purchaseDate)
+    {
+        while (true)
+        {
+            DateTime date = ReadDateOrDefault(label, currentValue);
+
+            if (date >= purchaseDate)
+            {
+                return date;
+            }
+
+            Console.WriteLine("Warranty expiration date cannot be before the purchase date.");
         }
     }
 

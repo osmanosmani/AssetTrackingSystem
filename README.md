@@ -197,6 +197,13 @@ Server=sqlserver,1433;Database=AssetTrackingDb;User Id=sa;Password=YourStrongPas
 
 For this school project, GitHub + LocalDB is the simplest and most presentation-friendly option.
 
+## Known Limitations
+
+- Exchange rates are fixed manually for educational purposes.
+- SQL Server LocalDB is intended for local Windows development.
+- Login, roles and employee management are not included in the current version.
+- The console UI is designed for a school project demo, not for production use.
+
 ## School Project Checklist
 
 - [x] C# Console Application

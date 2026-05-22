@@ -52,8 +52,8 @@ public class ExportService
                 Escape(asset.Brand),
                 Escape(asset.ModelName),
                 Escape(asset.Office?.Name ?? ""),
-                $"{asset.LocalPrice:0.00} {asset.Office?.Currency}",
-                AssetStatusHelper.GetStatus(asset));
+                Escape($"{asset.LocalPrice:0.00} {asset.Office?.Currency}"),
+                Escape(AssetStatusHelper.GetStatus(asset)));
 
             builder.AppendLine(line);
         }
