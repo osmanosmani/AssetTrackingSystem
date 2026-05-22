@@ -7,6 +7,7 @@ AssetService assetService = new();
 ReportService reportService = new(assetService);
 ExportService exportService = new();
 
+// The main loop keeps Program.cs focused on navigation and delegates business logic to services.
 while (true)
 {
     ClearConsole();

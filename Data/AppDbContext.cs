@@ -23,6 +23,7 @@ public class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // TPT mapping keeps common asset fields in Assets and category-specific fields in separate tables.
         modelBuilder.Entity<Asset>().ToTable("Assets");
         modelBuilder.Entity<ComputerAsset>().ToTable("ComputerAssets");
         modelBuilder.Entity<MobileAsset>().ToTable("MobileAssets");
@@ -36,6 +37,7 @@ public class AppDbContext : DbContext
             .Property(asset => asset.LocalPrice)
             .HasColumnType("decimal(18,2)");
 
+        // Seed data gives the demo a complete starting point after running Update-Database.
         modelBuilder.Entity<Office>().HasData(
             new Office { Id = 1, Name = "Sweden Office", Country = "Sweden", Currency = "SEK" },
             new Office { Id = 2, Name = "USA Office", Country = "USA", Currency = "USD" },

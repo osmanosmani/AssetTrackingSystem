@@ -152,6 +152,7 @@ public class ReportService
         int page = 0;
         int totalPages = (int)Math.Ceiling(assets.Count / (double)PageSize);
 
+        // Pagination prevents long asset lists from flooding the console in larger datasets.
         while (true)
         {
             List<Asset> currentPageAssets = assets.Skip(page * PageSize).Take(PageSize).ToList();

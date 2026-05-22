@@ -2,6 +2,7 @@ namespace AssetTrackingSystem.Helpers;
 
 public static class CurrencyHelper
 {
+    // Fixed rates are enough for this school project and keep the app independent from external APIs.
     private static readonly Dictionary<string, decimal> UsdExchangeRates = new()
     {
         ["USD"] = 1m,

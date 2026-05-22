@@ -15,6 +15,7 @@ public class ExportService
         EnsureExportFolderExists();
         string path = Path.Combine(ExportFolder, "assets-report.txt");
 
+        // TXT export mirrors the console table so it is easy to read without spreadsheet software.
         StringBuilder builder = new();
 
         builder.AppendLine("================ ASSET EXPORT ================");
@@ -39,6 +40,7 @@ public class ExportService
         EnsureExportFolderExists();
         string path = Path.Combine(ExportFolder, "assets-report.csv");
 
+        // CSV is intentionally flat so it can be opened directly in Excel or similar tools.
         StringBuilder builder = new();
         builder.AppendLine("Id,Type,Brand,Model,Office,Price,Status");
 
@@ -65,6 +67,7 @@ public class ExportService
         EnsureExportFolderExists();
         string path = Path.Combine(ExportFolder, "assets-report.json");
 
+        // JSON keeps richer field names for systems that may consume the report programmatically.
         var exportData = assets.Select(asset => new
         {
             asset.Id,
